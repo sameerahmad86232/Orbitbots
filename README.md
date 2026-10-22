@@ -17,7 +17,7 @@ An independent Android task assistant with configurable models, an encrypted pri
 
 ## Install
 
-Use the signed `Orbit-Bots-2.0.apk` from the repository's v2.0.0 release. If Android asks, allow installation from the browser/file manager used to open it. Android 8.0 or newer is required. The release shares the signing identity of the earlier Orbit APK so it can update that installation.
+Download the signed [Orbit-Bots-2.0.apk](https://github.com/sameerahmad86232/Orbitbots/raw/refs/heads/main/downloads/Orbit-Bots-2.0.apk), also available from the v2.0.0 release once the build passes. If Android asks, allow installation from the browser/file manager used to open it. Android 8.0 or newer is required. The release shares the signing identity of the earlier Orbit APK so it can update that installation.
 
 1. Open Settings and choose a provider preset or custom OpenAI-compatible URL.
 2. Save the connection **before** entering its API key. Credentials are bound to that exact URL and protocol; switching endpoints does not transfer the old key.
