@@ -1,0 +1,13 @@
+.private/
+build/
+tests/out/
+tests/lib/
+*.apk
+*.idsig
+*.jks
+*.keystore
+*.p12
+.env
+.env.*
+node_modules/
+__pycache__/

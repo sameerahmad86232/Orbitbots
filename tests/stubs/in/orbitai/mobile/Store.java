@@ -1,0 +1,1 @@
+package in.orbitai.mobile;import android.content.Context;import java.util.*;final class Store {static final Map<String,String> data=new HashMap<>();static String get(Context c,String k,String d){return data.getOrDefault(k,d);}}
