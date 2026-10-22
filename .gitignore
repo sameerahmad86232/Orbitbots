@@ -11,3 +11,10 @@ tests/lib/
 .env.*
 node_modules/
 __pycache__/
+.venv/
+computer/data/
+*.sqlite
+*.sqlite-*
+patch3.py
+ui3.py
+!computer/.env.example

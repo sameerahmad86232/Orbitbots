@@ -4,7 +4,7 @@ An independent Android task assistant with configurable models, an encrypted pri
 
 ![Orbit mobile interface](docs/preview.png)
 
-## Version 2.0
+## Core features (retained from 2.0)
 
 - **Model connections:** native xAI Responses or an OpenAI-compatible Chat Completions endpoint. Presets for OpenAI, OpenRouter, Google Gemini compatibility, Groq and Ollama. Custom HTTPS base URLs supported. This is protocol compatibility, not a promise that every vendor/model implements the same features.
 - **Ollama:** connect to an existing server on the phone or private LAN. No API key required by default. This APK does not install Ollama, download model weights or execute a model itself.
@@ -17,7 +17,7 @@ An independent Android task assistant with configurable models, an encrypted pri
 
 ## Install
 
-Download the signed [Orbit-Bots-2.0.apk](https://github.com/sameerahmad86232/Orbitbots/raw/refs/heads/main/downloads/Orbit-Bots-2.0.apk), also available from the v2.0.0 release once the build passes. If Android asks, allow installation from the browser/file manager used to open it. Android 8.0 or newer is required. The release shares the signing identity of the earlier Orbit APK so it can update that installation.
+Download the signed [Orbit-Bots-3.0.apk](https://github.com/sameerahmad86232/Orbitbots/raw/refs/heads/main/downloads/Orbit-Bots-3.0.apk), also available from the v3.0.0 release once the build passes. If Android asks, allow installation from the browser/file manager used to open it. Android 8.0 or newer is required. The release shares the signing identity of the earlier Orbit APK so it can update that installation.
 
 1. Open Settings and choose a provider preset or custom OpenAI-compatible URL.
 2. Save the connection **before** entering its API key. Credentials are bound to that exact URL and protocol; switching endpoints does not transfer the old key.
@@ -40,15 +40,26 @@ Use a model with tool support for agent actions; disable function calling for a 
 - Images require a vision-capable model; PDF attachments currently require xAI mode. Text/CSV/JSON/code work across providers. Maximum input attachment is 1.5 MB; text is limited to 300 KB. Old attachment bytes are not resent automatically; reattach when needed.
 - Streaming responses, native audio analysis, XLSX parsing, image/video generation and realtime voice are not included.
 
-## What is not included
+## Version 3.0: computer, notifications and a new look
 
-This is not a 100% Grok Bot clone and not affiliated with xAI. There is no always-on cloud computer, browser-use/Skyvern runtime, terminal, arbitrary code execution on the phone, connected inbox, bot-owned email address, automatic email sending, payment processing, third-party OAuth connectors, team/shared approvals, cross-device sync, vector RAG or 24/7 scheduler. Open-source projects do not remove their hosting, hardware and account requirements. OpenClaw, CrewAI, LangGraph, Inbox Zero, Qdrant and the other suggested servers are not installed or integrated in this APK.
+- **Apple-inspired interface:** light spatial cards, soft lilac accents, system fonts, dark mode and an original animated Milo SVG mascot. No Apple artwork or proprietary fonts are bundled.
+- **Notifications:** task completion, errors, partial/stopped work and approval alerts with tap-through navigation. Optional Android JobScheduler approval checks run around every 15 minutes, subject to Android restrictions; not instant push.
+- **Real computer connection:** the new [self-hosted companion](computer/README.md) starts Xvfb, Openbox and Chromium in Docker, with real OS input via xdotool and a live JPEG preview. Each click, drag, typing/key action, terminal command and email send requires explicit review. The APK does not provision a server.
+- **Server vision jobs:** with a separately configured vision model on the server, bounded persistent jobs can continue while the phone is offline. Every action pauses for approval. No model/API key is bundled or silently copied from the phone.
+- **Server services:** persistent action queues, audit logs, FTS knowledge, recurring action schedules, basic owner/reviewer/viewer shared-workspace tokens, optional approved SMTP sending and IMAP inbox headers. Terminal is disabled unless the server administrator opts in.
+- **Import preview:** import supported JSON bot profiles and text conversations (name + instructions/system_prompt/prompt + messages) from a file. Unknown formats and proprietary Grok share links are rejected. This is not a verified Grok Bot export integration. Credentials, connectors, files, permissions and workflows are not imported.
 
-Email tools create a local draft. Users review/edit it and open their mail app to send themselves. Payment, purchase, posting and account-deletion tools do not exist in this build. There are no guaranteed earnings.
+## What still requires setup or is absent
+
+This is an independent app, not affiliated with xAI and not a 100% Grok Bot clone. No always-on machine, model service, mail account or domain is provisioned. The user currently has only a phone, so computer/24-hour server features remain unavailable to that user until a server is hosted and configured. Open-source code does not remove hosting/hardware/model costs.
+
+There is no payment processor/X Money integration, Figma/Notion/Canva/Glean/QuickBooks OAuth, image/video generation, native realtime AI voice, noVNC/WebRTC/audio streaming, vector embeddings, bot-group chat, enterprise multi-tenancy, cross-device bot-state sync, teach-by-demonstration or arbitrary code execution **on the phone**. The optional terminal runs in the trusted server container. See the [computer deployment and security limits](computer/README.md).
+
+Local email tools prepare a draft for the mail app. The separate server email queue can send through configured SMTP **only after approval**. IMAP supports message headers, not full mailbox management. There are no guaranteed earnings or claims of outperforming another product.
 
 ## Privacy and storage
 
-Android Keystore AES-GCM protects local keys, app state, preferences, tasks and text artifacts. Keys are absent from UI state and chat/source exports. Prompts, attachments and retrieved files/pages are sent to the provider selected by the user. xAI mode requests `store:false`; provider retention policies still apply. Public web fetches never receive model API credentials. Provider requests refuse redirects. The WebView cannot make network requests itself and cannot load arbitrary remote content; native code makes the API calls.
+Android Keystore AES-GCM protects local keys, app state, preferences, tasks and text artifacts. Keys are absent from UI state and chat/source exports. Prompts, attachments and retrieved files/pages are sent to the provider selected by the user. xAI mode requests `store:false`; provider retention policies still apply. Public web fetches never receive model API credentials. Provider requests refuse redirects. Connected-computer screenshots go to your selected model when an agent requests them. Computer access tokens are encrypted separately and absent from exports. The WebView cannot make network requests itself and cannot load arbitrary remote content; native code makes the API calls.
 
 Provider endpoints must use HTTPS except Ollama on a device/private network. Android cleartext networking is enabled to permit that explicit Ollama case; the native provider validator rejects public HTTP endpoints. Website crawling accepts public HTTPS on port 443, checks resolved addresses, rejects private/loopback targets and revalidates redirects. It is a lightweight reader, not an isolated browser security boundary against every DNS-rebinding scenario. Responses, redirects, files and loop counts are bounded. Exports leave encrypted app storage. Removing a provider key removes the selected endpoint's credential; erasing app data removes all local credentials/state. Uninstalling loses local data.
 
@@ -67,15 +78,15 @@ Without signing variables this creates `build/aligned.apk`, an unsigned artifact
 
 ```sh
 bash tests/run.sh
-# Separately serve assets on localhost:8014, then:
-python3 -m http.server 8014 --directory assets
+# Separately serve assets on localhost:8015, then:
+python3 -m http.server 8015 --directory assets
 # In a second terminal with Playwright installed:
 python3 test_ui.py
 ```
 
 Provider contract tests use a real local HTTP server and test request/response translation, parallel tool calls, model discovery, chat-only mode, token fields, authentication, endpoint-bound credential IDs and insecure/private URL restrictions. They do not call a paid provider or load a language model. UI tests use a mocked native bridge and cover provider switching, Ollama configuration, knowledge import, file previews, templates, encrypted-state boundary behavior, tasks, drafts, exports, search, speed settings, mobile layout and untrusted-text rendering.
 
-The Android sources compile and the release signature verifies. Physical Android installation, real Ollama inference and live paid-provider integration have **not** been verified in this environment.
+The Android sources compile and the release signature verifies. Native-provider contracts and mocked-native UI tests pass. The computer tests run a real Docker desktop, navigate Chromium and execute a real approved X11 click. Server contracts test replay prevention, role restrictions, schedules, FTS, loopback SMTP and a bounded model loop. The integrated server loop is tested with a local HTTP protocol fixture, not real AI inference. Physical Android installation, real Ollama/paid vision inference, external SMTP/IMAP credentials and 24/7 hosting have **not** been verified or provisioned. See CI for the current checks.
 
 ## References
 
