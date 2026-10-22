@@ -39,6 +39,12 @@ window=inside('xdotool','search','--name','OrbitClickFixture').splitlines()[-1]
 geom=inside('xwininfo','-id',window)
 x=int(re.search(r'Absolute upper-left X:\s+(\d+)',geom).group(1))+30
 y=int(re.search(r'Absolute upper-left Y:\s+(\d+)',geom).group(1))+int(re.search(r'Height:\s+(\d+)',geom).group(1))-18
+if os.getenv('ORBIT_TEST_STREAM')=='1':
+ import asyncio
+ from test_stream import pointer
+ asyncio.run(pointer(x,y))
+ assert inside('sh','-c','test ! -e '+marker+' && echo blocked')=='blocked'
+ print('PASS: direct VNC pointer injection blocked at the server; approval gate cannot be bypassed')
 click=action({'kind':'click','x':x,'y':y})
 assert inside('sh','-c','test ! -e '+marker+' && echo waiting')=='waiting'
 assert approve(click)['status']=='done';time.sleep(.5)

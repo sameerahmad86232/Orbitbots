@@ -31,6 +31,9 @@ def auth(authorization:str=Header(default='')):
  if not authorization.startswith('Bearer '):raise HTTPException(401,'Authentication required')
  for role,value in [('owner',TOKEN),('reviewer',os.getenv('ORBIT_REVIEWER_TOKEN','')),('viewer',os.getenv('ORBIT_VIEWER_TOKEN',''))]:
   if len(value)>=24 and hmac.compare_digest(supplied,value):return role
+ lookup=globals().get('session_auth')
+ user=lookup(supplied) if lookup else None
+ if user:return user['role']
  raise HTTPException(401,'Authentication required')
 def owner(role=Depends(auth)):
  if role!='owner':raise HTTPException(403,'Owner role required')
@@ -40,13 +43,14 @@ def reviewer(role=Depends(auth)):
  return role
 class Action(BaseModel):
  model_config=ConfigDict(extra='forbid')
- kind:Literal['click','double_click','drag','type','key','scroll','open_url','terminal','send_email']
+ kind:Literal['click','double_click','drag','type','key','scroll','open_url','terminal','send_email','connector_write','stripe_checkout']
  x:int=Field(default=0,ge=0,le=1279);y:int=Field(default=0,ge=0,le=799)
  end_x:int=Field(default=0,ge=0,le=1279);end_y:int=Field(default=0,ge=0,le=799)
  text:str=Field(default='',max_length=20000)
  direction:Literal['up','down']='down'
  steps:int=Field(default=3,ge=1,le=10)
  to:str=Field(default='',max_length=250);subject:str=Field(default='',max_length=250)
+ connector:str='';operation:str='';account:str='';connection_id:str='';payload:dict=Field(default_factory=dict)
 class Review(BaseModel):approved:bool
 class Document(BaseModel):title:str=Field(max_length=150);content:str=Field(max_length=300000)
 class Routine(BaseModel):name:str=Field(max_length=100);action:Action;interval_seconds:int=Field(ge=60,le=2592000);enabled:bool=False
@@ -67,7 +71,9 @@ def enqueue(a):
  validate_action(a);ident=uuid.uuid4().hex
  with db() as c:c.execute('INSERT INTO actions VALUES(?,?,?,NULL,?,NULL)',(ident,a.model_dump_json(),'pending',time.time()))
  audit('approval_requested',{'id':ident,'kind':a.kind});return ident
-def execute(a):
+def execute(a,request_id=""):
+ if a.kind=="connector_write":return connector_write(a,request_id)
+ if a.kind=="stripe_checkout":return stripe_checkout(a,request_id)
  if a.kind in ('click','double_click'):
   run(['xdotool','mousemove','--sync',str(a.x),str(a.y)]);run(['xdotool','click','--repeat','2' if a.kind=='double_click' else '1','--delay','100','1'])
  elif a.kind=='drag':run(['xdotool','mousemove','--sync',str(a.x),str(a.y),'mousedown','1','mousemove','--sync',str(a.end_x),str(a.end_y),'mouseup','1'])
@@ -113,6 +119,7 @@ async def lifespan(app):
 app=FastAPI(title='Orbit Computer',lifespan=lifespan,docs_url=None,redoc_url=None,openapi_url=None)
 @app.middleware('http')
 async def headers(request,call_next):
+ if request.headers.get('content-length','').isdigit() and int(request.headers['content-length'])>25000000:return Response('Request limit: 25 MB',status_code=413)
  response=await call_next(request);response.headers['Cache-Control']='no-store';response.headers['X-Content-Type-Options']='nosniff';response.headers['Referrer-Policy']='no-referrer';response.headers['X-Frame-Options']='DENY';return response
 @app.get('/status',dependencies=[Depends(auth)])
 def status():
@@ -121,13 +128,15 @@ def status():
  try:browser=bool(run(['xdotool','search','--onlyvisible','--class','chromium'],3))
  except Exception:browser=False
  with db() as c:pending=c.execute("SELECT COUNT(*) FROM actions WHERE status='pending'").fetchone()[0]
- return {'ready':ready,'browser':browser,'width':1280,'height':800,'pending':pending,'terminal':os.getenv('ORBIT_ALLOW_TERMINAL')=='1','smtp':bool(os.getenv('SMTP_HOST') and os.getenv('SMTP_FROM')),'imap':bool(os.getenv('IMAP_HOST') and os.getenv('IMAP_USER')),'preview':'JPEG polling, not WebRTC/VNC','approval_policy':'all actions','version':'3.0','agent':bool(os.getenv('MODEL_BASE_URL') and os.getenv('MODEL_ID'))}
+ return {'ready':ready,'browser':browser,'width':1280,'height':800,'pending':pending,'terminal':os.getenv('ORBIT_ALLOW_TERMINAL')=='1','smtp':bool(os.getenv('SMTP_HOST') and os.getenv('SMTP_FROM')),'imap':bool(os.getenv('IMAP_HOST') and os.getenv('IMAP_USER')),'preview':'JPEG polling, not WebRTC/VNC','approval_policy':'all actions','version':'4.0','agent':bool(os.getenv('MODEL_BASE_URL') and os.getenv('MODEL_ID'))}
 @app.get('/screen',dependencies=[Depends(auth)])
 async def screen():
  try:return Response(await asyncio.to_thread(screenshot),media_type='image/jpeg')
  except Exception:raise HTTPException(503,'Desktop capture unavailable')
 @app.post('/actions',dependencies=[Depends(reviewer)])
-def actions(a:Action):return {'id':enqueue(a),'status':'pending','message':'Review the exact action before approval'}
+def actions(a:Action):
+ if a.kind in ('connector_write','stripe_checkout'):raise HTTPException(403,'Use the dedicated connector or payment queue')
+ return {'id':enqueue(a),'status':'pending','message':'Review the exact action before approval'}
 @app.get('/actions',dependencies=[Depends(auth)])
 def list_actions():
  with db() as c:rows=c.execute('SELECT * FROM actions ORDER BY created DESC LIMIT 40').fetchall()
@@ -148,7 +157,7 @@ async def review(ident:str,decision:Review):
   audit('approved' if decision.approved else 'rejected',{'id':ident})
   if not decision.approved:return {'status':'rejected'}
   try:
-   a=Action.model_validate_json(r['payload']);validate_action(a);result=await asyncio.to_thread(execute,a);state='done'
+   a=Action.model_validate_json(r['payload']);validate_action(a);result=await asyncio.to_thread(execute,a,ident);state='done'
   except Exception:result={'error':'Action failed or timed out. Inspect the desktop before retrying; an external action may have partially completed.'};state='failed'
   with db() as c:c.execute('UPDATE actions SET status=?,result=? WHERE id=?',(state,json.dumps(result),ident))
   audit('execution_'+state,{'id':ident});return {'status':state,'result':result}
@@ -168,6 +177,7 @@ def search(q:str):
  with db() as c:return {'matches':[dict(r) for r in c.execute("SELECT id,title,snippet(knowledge,2,'[',']','…',35) AS excerpt FROM knowledge WHERE knowledge MATCH ? ORDER BY rank LIMIT 8",(query,))]}
 @app.post('/routines',dependencies=[Depends(owner)])
 def routine(r:Routine):
+ if r.action.kind in ('connector_write','stripe_checkout'):raise HTTPException(403,'Connector writes and payment checkouts cannot be scheduled')
  validate_action(r.action);ident=uuid.uuid4().hex
  with db() as c:c.execute('INSERT INTO routines VALUES(?,?,?,?,?,?)',(ident,r.name,r.action.model_dump_json(),r.interval_seconds,time.time()+r.interval_seconds,int(r.enabled)))
  return {'id':ident,'enabled':r.enabled,'note':'Scheduled actions queue for approval; they do not bypass review'}
@@ -195,3 +205,30 @@ def home():return HTMLResponse((Path(__file__).parent/'preview.html').read_text(
 import sys
 from agent import install
 agent_worker,agent_tick,agent_model=install(sys.modules[__name__])
+
+# Configured outbound services may use HTTPS or explicit private-network HTTP.
+def outbound(base):
+ import socket,ipaddress
+ from urllib.parse import urlparse
+ u=urlparse(base)
+ if u.username or u.password or u.query or u.fragment or not u.hostname or u.scheme not in ('http','https'):raise HTTPException(422,'Invalid service base URL')
+ if u.scheme=='http':
+  for address in socket.getaddrinfo(u.hostname,u.port or 80):
+   ip=ipaddress.ip_address(address[4][0])
+   if not(ip.is_private or ip.is_loopback):raise HTTPException(422,'Public services require HTTPS')
+from accounts import install as install_accounts
+session_auth,identity=install_accounts(sys.modules[__name__])
+from rag import install as install_rag
+semantic_search=install_rag(sys.modules[__name__])
+
+from connectors import install as install_connectors
+connector_write=install_connectors(sys.modules[__name__])
+from media import install as install_media
+media_config=install_media(sys.modules[__name__])
+from payments import install as install_payments
+stripe_checkout=install_payments(sys.modules[__name__])
+from portals import install as install_portals
+install_portals(sys.modules[__name__])
+
+from documents import install as install_documents
+install_documents(sys.modules[__name__])

@@ -83,6 +83,10 @@ def install(s):
     context=[dict(r) for r in c.execute("SELECT title,snippet(knowledge,2,'[',']','…',35) AS excerpt FROM knowledge WHERE knowledge MATCH ? ORDER BY rank LIMIT 5",(query,))]
     if context:history.append({'untrusted_retrieved_knowledge':context})
   try:
+   if os.getenv('AGENT_SEMANTIC_RAG')=='1':
+    from rag import Query
+    try:history.append({'untrusted_semantic_knowledge':await asyncio.to_thread(s.semantic_search,Query(query=job['goal'][:2000]))})
+    except Exception:history.append({'retrieval':'Semantic retrieval unavailable; do not invent sources'})
    raw=await asyncio.to_thread(s.screenshot);command=await asyncio.to_thread(model,job,raw,history)
    with s.db() as c:
     c.execute('BEGIN IMMEDIATE')

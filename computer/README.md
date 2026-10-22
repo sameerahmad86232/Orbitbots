@@ -6,7 +6,7 @@ This service is **not provisioned hosting**. It needs a Linux server or computer
 
 - A real 1280×800 Xvfb display, Openbox and Chromium; persistent browser profile.
 - Real OS mouse clicks, double clicks, dragging, typing, key combinations and scrolling using xdotool.
-- Authenticated JPEG screenshot preview in the Android app and a browser dashboard. It refreshes approximately once per 1.2–1.5 seconds while visible. This is **polling**, not noVNC, WebRTC or audio streaming.
+- Authenticated JPEG screenshot preview in the Android app and a browser dashboard. The APK inline view refreshes every 1.5 seconds. The separate /desktop browser portal provides authenticated noVNC streaming, view-only enforced at x11vnc; no desktop audio stream is provided.
 - Every input/action, including terminal commands and SMTP sending, enters a persistent approval queue. An owner/reviewer must approve the immutable action before it executes. Replay approval is rejected; uncertain/failed executions are never automatically retried.
 - Optional persistent server vision jobs: screenshot → OpenAI-compatible vision model → one validated action → human approval → next screenshot. Jobs run without the phone being open while this server remains up. Requests are bounded to 1–30 per job. The server needs its own configured model credentials; the APK does not forward the phone's key.
 - SQLite audit history, full-text knowledge retrieval and interval schedules. Due schedules queue an action for approval, not an unrestricted AI workflow. Missed intervals coalesce. Schedules/queues survive restart.
@@ -45,7 +45,7 @@ In Computer choose **Start server agent**, enter a goal and request cap. View jo
 
 Set SMTP_HOST/PORT/FROM and credentials for your account. STARTTLS is required except port 465, which uses implicit TLS. A plaintext loopback-only test switch is used exclusively by tests. Set IMAP_HOST/USER/PASSWORD for SSL IMAP. Account providers may require app passwords or may forbid password authentication; unsupported OAuth cannot be substituted automatically. In the APK, Compose server email queues a reviewable message. Agent mailbox access is a separate explicit toggle in Settings.
 
-Files → View → Copy to server knowledge uploads a chosen text file to this service. SQLite FTS retrieval is lexical, **not vector/embedding RAG**. Server data is stored on the Docker data volume; mobile encryption does not encrypt this volume. Use encrypted host storage/backups and a server you trust. Screenshots, browser sessions and action history can contain sensitive information.
+Files → View → Copy to server knowledge uploads a chosen text file to this service. SQLite FTS remains available. Version 4 also provides explicitly configured embedding/vector retrieval; see the version 4 guide. Server data is stored on the Docker data volume; mobile encryption does not encrypt this volume. Use encrypted host storage/backups and a server you trust. Screenshots, browser sessions and action history can contain sensitive information.
 
 ### Notifications
 
@@ -65,7 +65,7 @@ For deployments behind a TLS inspection proxy, provide the proxy's CA as a read-
 
 This is a trusted, single-workspace self-hosted service. Use one isolated server/container per trusted workspace. Docker runs as an unprivileged user with dropped capabilities, resource limits and no Docker socket/host filesystem mounts. Chromium uses `--no-sandbox` inside the outer container because this deployment does not supply its separate sandbox prerequisites. The container is not a hardened browser VM, gVisor or Firecracker sandbox. Do not run hostile workloads or attach production secrets to an untrusted desktop. An enabled, approved terminal command runs as the same container user and can access that user's files/processes; it is not isolated from service credentials. Keep terminal disabled unless you understand that trust model.
 
-No billing/hosting account, cloud machine, email account, automatic mailbox provisioning, Stripe/X Money payment processing, Figma/Notion/Canva/Glean/QuickBooks OAuth, vector database, image/video generation, desktop audio stream or verified Grok proprietary import is supplied. Model performance and account integrations are not guaranteed. Shared role tokens grant access to this shared computer and its history, not separate private user workspaces.
+Version 4 adds configurable OAuth, semantic retrieval, media, Realtime voice, encrypted snapshots, accounts and Stripe Checkout paths; see ../docs/VERSION-4.md. No billing/hosting account, cloud machine, provider credit, email account, mailbox provisioning, X Money, desktop audio stream or verified Grok proprietary import is supplied. Model performance and account integrations are not guaranteed. Shared role tokens grant access to this shared computer and its history, not separate private user workspaces.
 
 ## Tests
 

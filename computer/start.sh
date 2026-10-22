@@ -6,6 +6,7 @@ cleanup(){ trap - TERM INT EXIT; if ((${#pids[@]})); then kill "${pids[@]}" 2>/d
 trap cleanup TERM INT EXIT
 Xvfb :99 -screen 0 1280x800x24 -nolisten tcp & pids+=($!)
 for n in {1..50}; do if xdpyinfo >/dev/null 2>&1; then break; fi; sleep .1; done
+x11vnc -display :99 -localhost -rfbport 5900 -nopw -viewonly -forever -shared >/tmp/vnc.log 2>&1 & pids+=($!)
 openbox >/tmp/openbox.log 2>&1 & pids+=($!)
 if [[ -n "${ORBIT_CA_CERT:-}" ]]; then
  mkdir -p "$HOME/.pki/nssdb"

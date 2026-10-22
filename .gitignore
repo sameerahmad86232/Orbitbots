@@ -18,3 +18,5 @@ computer/data/
 patch3.py
 ui3.py
 !computer/.env.example
+ui4.py
+upgrade4.py

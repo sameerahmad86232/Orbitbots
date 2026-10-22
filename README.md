@@ -8,7 +8,7 @@ An independent Android task assistant with configurable models, an encrypted pri
 
 - **Model connections:** native xAI Responses or an OpenAI-compatible Chat Completions endpoint. Presets for OpenAI, OpenRouter, Google Gemini compatibility, Groq and Ollama. Custom HTTPS base URLs supported. This is protocol compatibility, not a promise that every vendor/model implements the same features.
 - **Ollama:** connect to an existing server on the phone or private LAN. No API key required by default. This APK does not install Ollama, download model weights or execute a model itself.
-- **Private knowledge:** import text, Markdown, code, CSV or JSON into a bot's encrypted workspace. Models with function calling can search saved files using exact-text retrieval. No vector database or embedding claim.
+- **Private knowledge:** import text, Markdown, code, CSV or JSON into a bot's encrypted workspace. Models with function calling can search saved files using exact-text retrieval. Local retrieval is lexical; version 4 adds separately configured server embeddings.
 - **Public web tools:** jsoup-based HTTPS page extraction and read-only crawling of up to three same-host HTML pages. Page text and links are returned to the selected model. Enable these tools explicitly in Settings. No browser automation, JavaScript execution, website login or paid crawler dependency.
 - **Agent loop:** bounded model requests, text-file creation/reading, saved preferences, editable email drafts, cancellation, activity history and token counts reported by the provider. Models without function calling have a chat-only option.
 - **Phone interface:** redesigned teal/blue cards, dark/light themes, searchable bots/chats, quick prompts, six role templates, file previews/exports and Android text sharing.
@@ -17,7 +17,7 @@ An independent Android task assistant with configurable models, an encrypted pri
 
 ## Install
 
-Download the signed [Orbit-Bots-3.0.apk](https://github.com/sameerahmad86232/Orbitbots/raw/refs/heads/main/downloads/Orbit-Bots-3.0.apk), also available from the v3.0.0 release once the build passes. If Android asks, allow installation from the browser/file manager used to open it. Android 8.0 or newer is required. The release shares the signing identity of the earlier Orbit APK so it can update that installation.
+Download the signed [Orbit-Bots-4.0.apk](https://github.com/sameerahmad86232/Orbitbots/raw/refs/heads/main/downloads/Orbit-Bots-4.0.apk), also available from the v4.0.0 release once the build passes. If Android asks, allow installation from the browser/file manager used to open it. Android 8.0 or newer is required. The release shares the signing identity of the earlier Orbit APK so it can update that installation.
 
 1. Open Settings and choose a provider preset or custom OpenAI-compatible URL.
 2. Save the connection **before** entering its API key. Credentials are bound to that exact URL and protocol; switching endpoints does not transfer the old key.
@@ -37,25 +37,22 @@ Use a model with tool support for agent actions; disable function calling for a 
 - Other presets use `/chat/completions` and `/models`. There is no automatic protocol guessing, provider fallback or silent model switching.
 - OpenAI preset sends `max_completion_tokens`; other compatibility presets send `max_tokens`. A provider may reject unsupported models/parameters/tools. Model listing itself may be unavailable on some compatible services; enter the ID manually in that case.
 - Anthropic's native Messages API and other proprietary APIs are not implemented. Anthropic models can be accessed through a compatible gateway such as OpenRouter if available to your account.
-- Images require a vision-capable model; PDF attachments currently require xAI mode. Text/CSV/JSON/code work across providers. Maximum input attachment is 1.5 MB; text is limited to 300 KB. Old attachment bytes are not resent automatically; reattach when needed.
-- Streaming responses, native audio analysis, XLSX parsing, image/video generation and realtime voice are not included.
+- Images require a vision-capable model; PDF attachments currently require xAI mode. Text/CSV/JSON/code work across providers. Images/PDF vision attachments are limited to 1.5 MB; UTF-8 text to 1 MB. Version 4 offers bounded local XLSX and server extraction paths. Old attachment bytes are not resent automatically; reattach when needed.
+- Core chat is non-streaming. Version 4 adds local XLSX extraction and configurable server media/voice paths; see the capability guide.
 
-## Version 3.0: computer, notifications and a new look
+## Version 4.0 additions
 
-- **Apple-inspired interface:** light spatial cards, soft lilac accents, system fonts, dark mode and an original animated Milo SVG mascot. No Apple artwork or proprietary fonts are bundled.
-- **Notifications:** task completion, errors, partial/stopped work and approval alerts with tap-through navigation. Optional Android JobScheduler approval checks run around every 15 minutes, subject to Android restrictions; not instant push.
-- **Real computer connection:** the new [self-hosted companion](computer/README.md) starts Xvfb, Openbox and Chromium in Docker, with real OS input via xdotool and a live JPEG preview. Each click, drag, typing/key action, terminal command and email send requires explicit review. The APK does not provision a server.
-- **Server vision jobs:** with a separately configured vision model on the server, bounded persistent jobs can continue while the phone is offline. Every action pauses for approval. No model/API key is bundled or silently copied from the phone.
-- **Server services:** persistent action queues, audit logs, FTS knowledge, recurring action schedules, basic owner/reviewer/viewer shared-workspace tokens, optional approved SMTP sending and IMAP inbox headers. Terminal is disabled unless the server administrator opts in.
-- **Import preview:** import supported JSON bot profiles and text conversations (name + instructions/system_prompt/prompt + messages) from a file. Unknown formats and proprietary Grok share links are rejected. This is not a verified Grok Bot export integration. Credentials, connectors, files, permissions and workflows are not imported.
+See the [capability matrix and setup guide](docs/VERSION-4.md) for exact limits and verification.
 
-## What still requires setup or is absent
+- Configurable OAuth connectors for Google, Microsoft, Notion, Figma, Canva and QuickBooks, including selected approved write operations.
+- Provider-backed image/video/transcription/speech jobs and a browser WebRTC voice portal.
+- Authenticated, server-enforced view-only noVNC streaming, retaining approval gates for real input.
+- Individual accounts/roles, expiring sessions, encrypted cross-device snapshots and revision conflicts.
+- Embedding-based semantic retrieval, optional agent RAG, local XLSX parsing and larger server-side document extraction.
+- Approved Stripe Checkout links and verified webhook payment status.
+- A deployment configuration helper/TLS template and Android emulator tests for installation, native encryption and XLSX behavior.
 
-This is an independent app, not affiliated with xAI and not a 100% Grok Bot clone. No always-on machine, model service, mail account or domain is provisioned. The user currently has only a phone, so computer/24-hour server features remain unavailable to that user until a server is hosted and configured. Open-source code does not remove hosting/hardware/model costs.
-
-There is no payment processor/X Money integration, Figma/Notion/Canva/Glean/QuickBooks OAuth, image/video generation, native realtime AI voice, noVNC/WebRTC/audio streaming, vector embeddings, bot-group chat, enterprise multi-tenancy, cross-device bot-state sync, teach-by-demonstration or arbitrary code execution **on the phone**. The optional terminal runs in the trusted server container. See the [computer deployment and security limits](computer/README.md).
-
-Local email tools prepare a draft for the mail app. The separate server email queue can send through configured SMTP **only after approval**. IMAP supports message headers, not full mailbox management. There are no guaranteed earnings or claims of outperforming another product.
+No cloud machine, OAuth registration, model credits, mail account or merchant account is provisioned. With only a phone and no host, connected services remain inactive until hosting/configuration exists. These additions are implemented integration paths, not a claim that live external accounts were connected or all Grok Bot features match. Verified proprietary Grok Bot import remains blocked pending an actual export schema/sample. Existing previewed JSON imports remain available. No X Money, enterprise tenant isolation, continuous collaborative sync, WebRTC desktop audio or guaranteed earnings.
 
 ## Privacy and storage
 
