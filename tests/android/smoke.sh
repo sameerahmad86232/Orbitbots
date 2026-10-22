@@ -4,8 +4,8 @@ adb install -r downloads/Orbit-Bots-4.0.apk
 adb logcat -c
 adb shell am start -W -n in.orbitai.mobile/.MainActivity
 sleep 4
-adb shell dumpsys activity activities | rg 'in.orbitai.mobile/.MainActivity'
-if adb logcat -d -s AndroidRuntime:E | rg 'FATAL EXCEPTION'; then exit 1; fi
+adb shell dumpsys activity activities | grep -F 'in.orbitai.mobile/.MainActivity'
+if adb logcat -d -s AndroidRuntime:E | grep -F 'FATAL EXCEPTION'; then exit 1; fi
 adb exec-out screencap -p > tests/android/build/app-smoke.png
 adb install -r tests/android/build/harness.apk
 adb shell am start -W -n in.orbitai.tests/in.orbitai.mobile.Harness
